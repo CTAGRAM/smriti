@@ -163,7 +163,7 @@ function panel(d, st, det, u) {
   if (u.tab === 'search') {
     const r = u.results;
     return `<form data-form="search">
-        <input type="text" name="q" value="${esc(u.q)}" placeholder="e.g. which pregnant women have danger signs?" autocomplete="off">
+        <input type="text" onfocus="this.select()" name="q" value="${esc(u.q)}" placeholder="e.g. which pregnant women have danger signs?" autocomplete="off">
       </form>
       <div class="chips">${[['', 'Everything'], ['note', 'Notes'], ['household', 'Households'], ['protocol', 'Protocols']].map(([k, l]) => `<button data-act="kind" data-v="${k}" class="${u.kind === k ? 'sel' : ''}">${l}</button>`).join('')}
         <button data-act="ask" style="margin-left:auto" class="${st.online ? '' : ''}">${u.busy === 'ask' ? 'Thinking…' : st.online ? 'Ask with cloud AI →' : 'Ask (offline: memory only)'}</button></div>
