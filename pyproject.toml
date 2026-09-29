@@ -1,0 +1,13 @@
+[project]
+name = "smriti"
+version = "0.1.0"
+description = "Offline-first AI memory for frontline health workers, built on Qdrant Edge"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.142.0",
+    "fastembed>=0.8.1",
+    "google-genai>=2.25.0",
+    "qdrant-client>=1.19.1",
+    "qdrant-edge-py>=0.8.0",
+    "uvicorn[standard]>=0.54.0",
+]

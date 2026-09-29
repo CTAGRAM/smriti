@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smriti — offline-first memory for frontline health workers</title>
+<style>
+  :root {
+    --bg: #eef2f4; --card: #fff; --ink: #0f1d24; --muted: #5b6b73; --faint: #93a1a8; --line: #dde4e8;
+    --teal: #0f766e; --teal-deep: #0b4f4a; --teal-soft: #e0f2ef; --red: #c2362b; --red-soft: #fbe9e7;
+    --amber: #a15c07; --amber-soft: #fdf0dc; --indigo: #3949ab; --indigo-soft: #e8eaf6;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 -apple-system, "Inter", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  header { display: flex; align-items: center; gap: 18px; padding: 14px 24px; background: var(--card); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand b { font-size: 22px; letter-spacing: -0.02em; }
+  .brand span { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
+  .tag { color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  main { display: grid; grid-template-columns: 1fr 1fr 1.05fr; gap: 16px; padding: 16px 24px 32px; align-items: start; }
+  .col { background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; min-width: 0; }
+  .head { padding: 14px 16px 12px; border-bottom: 1px solid var(--line); }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .who b { font-size: 16px; display: block; }
+  .who small { color: var(--muted); font-size: 12px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+  .on { background: var(--teal-soft); color: var(--teal-deep); } .off { background: #26343b; color: #fff; }
+  .urgent { background: var(--red-soft); color: var(--red); } .normal { background: #eef1f3; color: var(--muted); }
+  .cloud { background: var(--indigo-soft); color: var(--indigo); } .device { background: var(--teal-soft); color: var(--teal-deep); }
+  .warn { background: var(--amber-soft); color: var(--amber); }
+  .switch { margin-left: auto; display: inline-flex; border: 1px solid var(--line); border-radius: 99px; padding: 3px; background: #f5f7f8; }
+  .switch button { border: 0; background: transparent; padding: 5px 12px; border-radius: 99px; font: inherit; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .switch button.sel-on { background: var(--teal); color: #fff; } .switch button.sel-off { background: #26343b; color: #fff; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
+  .stat { background: #f6f8f9; border-radius: 12px; padding: 8px 10px; }
+  .stat b { font-size: 18px; display: block; } .stat small { color: var(--muted); font-size: 11px; }
+  .syncbar { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .btn { border: 0; border-radius: 99px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--teal); color: #fff; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; } .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  .btn.small { padding: 4px 10px; font-size: 12px; }
+  .tabs { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tabs button { border: 0; background: none; padding: 8px 10px; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tabs button.sel { color: var(--ink); border-bottom-color: var(--teal); font-weight: 600; }
+  .body { padding: 14px 16px; max-height: calc(100vh - 330px); min-height: 420px; overflow-y: auto; }
+  input[type=text], textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font: inherit; background: #fff; color: var(--ink); outline: none; }
+  input[type=text]:focus, textarea:focus, select:focus { border-color: var(--teal); }
+  textarea { min-height: 84px; resize: vertical; }
+  .hit, .item { border: 1px solid var(--line); border-radius: 12px; padding: 10px 11px; margin-top: 8px; }
+  .hit .meta, .item .meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 4px; font-size: 11px; color: var(--faint); }
+  .latency { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .latency b { font-family: var(--mono); color: var(--teal-deep); font-size: 13px; }
+  .decision { border-radius: 14px; padding: 12px; margin-top: 10px; background: #f6f8f9; }
+  .decision.is-urgent { background: var(--red-soft); }
+  .decision ul { margin: 6px 0 0; padding-left: 18px; }
+  code, .mono { font-family: var(--mono); font-size: 12px; }
+  .redacted { font-family: var(--mono); font-size: 12px; background: #fff; border: 1px dashed var(--line); padding: 6px 8px; border-radius: 8px; margin-top: 6px; }
+  .hh { border: 1px solid var(--line); border-radius: 14px; padding: 11px; margin-top: 10px; }
+  .hh.risky { border-color: #f1b8b1; }
+  .hh h4 { margin: 0; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+  .hh dl { display: grid; grid-template-columns: 90px 1fr; gap: 3px 10px; margin: 8px 0 0; font-size: 13px; }
+  .hh dt { color: var(--muted); } .hh dd { margin: 0; }
+  .conflict { background: var(--amber-soft); border-radius: 12px; padding: 10px; margin-top: 8px; font-size: 13px; }
+  .conflict .opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .editor { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .muted { color: var(--muted); } .faint { color: var(--faint); }
+  .ev { display: grid; grid-template-columns: 58px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f3f4; font-size: 13px; }
+  .ev time { font-family: var(--mono); font-size: 11px; color: var(--faint); padding-top: 2px; }
+  .ev.conflict-ev { color: var(--amber); } .ev.sync-ev { color: var(--teal-deep); }
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+  .chips button { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 3px 10px; font: inherit; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .chips button.sel { border-color: var(--teal); color: var(--teal-deep); background: var(--teal-soft); }
+  .answer { background: var(--indigo-soft); border-radius: 14px; padding: 12px; margin-top: 10px; white-space: pre-wrap; }
+  details { margin-top: 8px; font-size: 12px; color: var(--muted); } summary { cursor: pointer; }
+  .section { margin-top: 18px; } .section h3 { font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 6px; }
+  .cloudtop { background: linear-gradient(135deg, #1f2a6b, #3949ab); color: #fff; }
+  .cloudtop small { color: #c5cae9; } .cloudtop .stat { background: rgba(255,255,255,.12); } .cloudtop .stat small { color: #c5cae9; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f1d24; color: #fff; padding: 10px 16px; border-radius: 99px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .empty { color: var(--faint); font-size: 13px; padding: 12px 0; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } .body { max-height: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b>Smriti</b><span>स्मृति · memory</span></div>
+  <div class="tag">Offline-first AI memory for frontline health workers — Qdrant Edge on every device, one Qdrant Server for the district.</div>
+  <div class="spacer"></div>
+  <button class="btn ghost small" id="reset">Reset demo</button>
+</header>
+<main id="main"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const api = async (path, opts = {}) => {
+  const res = await fetch(path, { headers: { 'content-type': 'application/json' }, ...opts, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || res.statusText);
+  return data;
+};
+const toast = msg => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); };
+const ago = iso => { if (!iso) return 'never'; const s = Math.round((Date.now() - new Date(iso)) / 1000); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`; };
+const clock = ts => new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+const DEVICES = ['asha-sunita', 'anm-rekha'];
+const ui = Object.fromEntries(DEVICES.map(d => [d, { tab: 'search', q: '', kind: '', results: null, decision: null, answer: null, busy: false }]));
+let state = null, details = {}, bench = {}, benchBusy = false;
+
+async function refresh() {
+  state = await api('/api/state');
+  if (!bench.points) bench = await api('/api/benchmark');
+  await Promise.all(DEVICES.map(async d => { details[d] = await api(`/api/devices/${d}`); }));
+  render();
+}
+
+function deviceColumn(d) {
+  const st = state.devices.find(x => x.id === d), det = details[d], u = ui[d];
+  const tabs = [['search', 'Search & ask'], ['write', 'Write'], ['households', 'Households'], ['outbox', `Outbox${st.pending_urgent + st.pending_normal ? ` (${st.pending_urgent + st.pending_normal})` : ''}`], ['activity', 'Activity']];
+  const conflicts = det.households.reduce((n, h) => n + (h.conflicts?.length || 0), 0);
+  return `<section class="col" data-dev="${d}">
+    <div class="head">
+      <div class="row">
+        <div class="who"><b>${esc(st.name)}</b><small>${esc(st.role)}</small></div>
+        <div class="switch">
+          <button data-act="online" data-v="1" class="${st.online ? 'sel-on' : ''}">Online</button>
+          <button data-act="online" data-v="0" class="${st.online ? '' : 'sel-off'}">Offline</button>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>${st.local_points}</b><small>on this device</small></div>
+        <div class="stat"><b>${st.cloud_points}</b><small>cloud mirror</small></div>
+        <div class="stat"><b style="color:${st.pending_urgent ? 'var(--red)' : 'inherit'}">${st.pending_urgent}<span class="faint" style="font-size:13px"> / ${st.pending_normal}</span></b><small>queued urgent / other</small></div>
+        <div class="stat"><b>${st.local_only}</b><small>never leave device</small></div>
+      </div>
+      <div class="syncbar">
+        <span class="pill ${st.online ? 'on' : 'off'}">${st.online ? '● online' : '✈ offline'}</span>
+        <span>Last sync ${ago(st.last_sync)}${conflicts ? ` · <b style="color:var(--amber)">${conflicts} conflict${conflicts > 1 ? 's' : ''}</b>` : ''}</span>
+        <button class="btn small" data-act="sync" style="margin-left:auto" ${st.online && !u.busy ? '' : 'disabled'}>${u.busy === 'sync' ? 'Syncing…' : 'Sync now'}</button>
+      </div>
+    </div>
+    <div class="tabs">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" class="${u.tab === k ? 'sel' : ''}">${l}</button>`).join('')}</div>
+    <div class="body">${panel(d, st, det, u)}</div>
+  </section>`;
+}
+
+function hitCard(h) {
+  return `<div class="hit">
+    <div class="meta">
+      <span class="pill ${h.source}">${h.source === 'device' ? 'on device' : 'cloud mirror'}</span>
+      <span class="pill normal">${esc(h.kind)}</span>
+      ${h.priority === 'urgent' ? '<span class="pill urgent">urgent</span>' : ''}
+      <span>${esc(h.author || '')}</span><span class="mono" style="margin-left:auto">rrf ${h.score}</span>
+    </div>
+    <div>${esc(h.text)}</div>
+  </div>`;
+}
+
+function panel(d, st, det, u) {
+  if (u.tab === 'search') {
+    const r = u.results;
+    return `<form data-form="search">
+        <input type="text" name="q" value="${esc(u.q)}" placeholder="e.g. which pregnant women have danger signs?" autocomplete="off">
+      </form>
+      <div class="chips">${[['', 'Everything'], ['note', 'Notes'], ['household', 'Households'], ['protocol', 'Protocols']].map(([k, l]) => `<button data-act="kind" data-v="${k}" class="${u.kind === k ? 'sel' : ''}">${l}</button>`).join('')}
+        <button data-act="ask" style="margin-left:auto" class="${st.online ? '' : ''}">${u.busy === 'ask' ? 'Thinking…' : st.online ? 'Ask with cloud AI →' : 'Ask (offline: memory only)'}</button></div>
+      ${r ? `<div class="latency">⚡ <b>${r.search_ms} ms</b> hybrid search (dense + BM25) on-device · embed ${r.embed_ms ?? '—'} ms · ${r.online ? 'online' : '<b style="color:var(--ink)">no network used</b>'}</div>` : ''}
+      ${r?.filters?.length ? `<div class="chips" style="margin-top:6px"><span class="faint" style="font-size:12px;align-self:center">Qdrant payload filters, parsed on-device:</span>${r.filters.map(f => `<span class="pill device" style="text-transform:none">${esc(f)}</span>`).join('')}</div>` : ''}
+      ${u.answer ? (u.answer.offline
+        ? `<div class="answer" style="background:#f1f3f4">Offline — here is what this device remembers. Generative answers resume when there is a connection.</div>`
+        : `<div class="answer">${esc(u.answer.answer)}</div>
+           <details><summary>What left the device (${u.answer.sent_to_cloud.length} snippets, all redacted)</summary>${u.answer.sent_to_cloud.map(t => `<div class="redacted">${esc(t)}</div>`).join('')}</details>`) : ''}
+      ${r ? (r.hits.length ? r.hits.map(hitCard).join('') : '<p class="empty">No matches.</p>') : '<p class="empty">Search runs entirely on this device against Qdrant Edge — try it in offline mode.</p>'}`;
+  }
+  if (u.tab === 'write') {
+    const hhOpts = det.households.map(h => `<option value="${h.household}">${h.household} · ${esc(h.fields.name || '')}</option>`).join('');
+    const dec = u.decision;
+    return `<form data-form="note">
+        <textarea name="text" placeholder="Visit note, as you would say it — names and numbers are fine, they stay on this device."></textarea>
+        <div class="editor"><select name="household"><option value="">No household</option>${hhOpts}</select>
+          <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" name="private"> Private (never sync)</label></div>
+        <button class="btn" style="margin-top:10px">Save to memory</button>
+      </form>
+      ${dec ? `<div class="decision ${dec.priority === 'urgent' ? 'is-urgent' : ''}">
+          <div class="row"><b>Sync policy decided on-device</b>
+            <span class="pill ${dec.share === 'local_only' ? 'off' : 'cloud'}">${dec.share.replace('_', ' ')}</span>
+            ${dec.priority === 'urgent' ? '<span class="pill urgent">urgent · syncs first</span>' : ''}</div>
+          <ul>${dec.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+          ${dec.share !== 'local_only' ? `<div class="muted" style="margin-top:8px;font-size:12px">What the district server will receive:</div><div class="redacted">${esc(dec.redacted_text)}</div>` : ''}
+        </div>` : ''}`;
+  }
+  if (u.tab === 'households') {
+    return det.households.map(h => {
+      const f = h.fields, risky = /high|danger/i.test(f.risk || '');
+      return `<div class="hh ${risky ? 'risky' : ''}">
+        <h4>${esc(f.name || '')} <span class="pill normal">${h.household}</span>${risky ? '<span class="pill urgent">high risk</span>' : ''}<span class="faint mono" style="margin-left:auto;font-size:11px">v${h.version}</span></h4>
+        <dl><dt>Status</dt><dd>${esc(f.status)}</dd><dt>Risk</dt><dd>${esc(f.risk)}</dd><dt>Next visit</dt><dd>${esc(f.next_visit)}</dd>${f.notes ? `<dt>Notes</dt><dd>${esc(f.notes)}</dd>` : ''}</dl>
+        <div class="faint" style="font-size:11px;margin-top:6px">Last change by ${esc(h.updated_by)} · name shown only on this device</div>
+        ${(h.conflicts || []).map(c => `<div class="conflict"><b>Conflict · ${esc(c.field.replace('_', ' '))}</b><br>
+            ${esc(c.mine_by)}: “${esc(c.mine)}” &nbsp;vs&nbsp; ${esc(c.theirs_by)}: “${esc(c.theirs)}”
+            <div class="opts"><button class="btn small" data-act="resolve" data-hh="${h.household}" data-field="${c.field}" data-value="${esc(c.mine)}">Keep “${esc(c.mine)}”</button>
+            <button class="btn small ghost" data-act="resolve" data-hh="${h.household}" data-field="${c.field}" data-value="${esc(c.theirs)}">Keep “${esc(c.theirs)}”</button></div></div>`).join('')}
+        <details><summary>Update record</summary>
+          <form data-form="hh" data-hh="${h.household}" class="editor">
+            <input type="text" name="risk" placeholder="risk" value="${esc(f.risk)}">
+            <input type="text" name="next_visit" placeholder="next visit" value="${esc(f.next_visit)}">
+            <input type="text" name="status" placeholder="status" value="${esc(f.status)}" style="grid-column:1/-1">
+            <button class="btn small" style="grid-column:1/-1">Save change</button>
+          </form></details>
+      </div>`;
+    }).join('') || '<p class="empty">No households.</p>';
+  }
+  if (u.tab === 'outbox') {
+    return det.outbox.map(o => `<div class="item">
+        <div class="meta"><span class="pill ${o.priority}">${o.priority}</span><span class="pill ${o.status === 'local_only' ? 'off' : o.status === 'pending' ? 'warn' : 'on'}">${o.status.replace('_', ' ')}</span><span>${esc(o.kind)}</span></div>
+        <div class="mono" style="font-size:12px">${esc(o.text)}</div>
+        ${o.reasons?.length ? `<div class="faint" style="font-size:12px;margin-top:4px">${o.reasons.map(esc).join(' · ')}</div>` : ''}
+      </div>`).join('') || '<p class="empty">Nothing queued.</p>';
+  }
+  const b = bench;
+  const benchCard = `<div class="decision" style="margin:0 0 14px">
+      <div class="row"><b>On-device scale test</b><button class="btn small ghost" data-act="bench" style="margin-left:auto">${benchBusy ? 'Running… (~1 min)' : b.points ? 'Re-run' : 'Run with 10,000 memories'}</button></div>
+      ${b.points ? `<div class="stats" style="margin-top:10px">
+          <div class="stat"><b>${b.points.toLocaleString()}</b><small>memories in a fresh Edge shard</small></div>
+          <div class="stat"><b>${b.index_s}s</b><small>HNSW index built on-device</small></div>
+          <div class="stat"><b>${b.hybrid_p50_ms} ms</b><small>hybrid search p50 (p95 ${b.hybrid_p95_ms})</small></div>
+          <div class="stat"><b>${b.filtered_p50_ms} ms</b><small>filtered p50 (p95 ${b.filtered_p95_ms})</small></div>
+        </div><div class="faint" style="font-size:11px;margin-top:6px">Filter: ${esc(b.filter)} · embedding ${b.embed_per_s}/s on CPU · ran ${esc(b.ran_at)}</div>`
+      : '<div class="muted" style="font-size:12px;margin-top:6px">Fills a fresh shard with realistic visit notes, builds the index in-process, then times search with and without payload filters.</div>'}
+    </div>`;
+  return benchCard + det.events.map(e => `<div class="ev ${e.kind === 'conflict' ? 'conflict-ev' : e.kind === 'sync' ? 'sync-ev' : ''}"><time>${clock(e.ts)}</time><div>${esc(e.message)}</div></div>`).join('') || '<p class="empty">No activity yet.</p>';
+}
+
+function cloudColumn() {
+  const c = state.cloud;
+  return `<section class="col">
+    <div class="head cloudtop">
+      <div class="who"><b>District server</b><small>Qdrant Server 1.19 · receives only redacted data · publishes protocols</small></div>
+      <div class="stats">
+        <div class="stat"><b>${c.total}</b><small>points</small></div>
+        <div class="stat"><b>${c.notes}</b><small>notes</small></div>
+        <div class="stat"><b>${c.households}</b><small>households</small></div>
+        <div class="stat"><b>${c.protocols}</b><small>protocols</small></div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="section" style="margin-top:0"><h3>Urgent alerts · arrive first</h3>
+        ${c.urgent.map(p => `<div class="item" style="border-color:#f1b8b1"><div class="meta"><span class="pill urgent">urgent</span><span>${esc(p.author)}</span><span style="margin-left:auto">${ago(p.created_at)}</span></div>${esc(p.text)}</div>`).join('') || '<p class="empty">None.</p>'}
+      </div>
+      <div class="section"><h3>Conflicts needing review</h3>
+        ${c.conflicts.map(k => `<div class="conflict"><b>${k.household} · ${esc(k.field.replace('_', ' '))}</b><br>${esc(k.mine_by)}: “${esc(k.mine)}” vs ${esc(k.theirs_by)}: “${esc(k.theirs)}”</div>`).join('') || '<p class="empty">None.</p>'}
+      </div>
+      <div class="section"><h3>Publish an advisory to every device</h3>
+        <form data-form="protocol">
+          <input type="text" name="title" placeholder="Title" value="Heatwave advisory">
+          <textarea name="text" style="margin-top:6px">Tell families to drink ORS or water often, rest in shade from 12 to 4 pm, and bring anyone confused or with very hot, dry skin to the PHC at once.</textarea>
+          <button class="btn" style="margin-top:8px;background:var(--indigo)">Publish</button>
+          <span class="faint" style="font-size:12px;margin-left:8px">Devices receive it on their next sync (partial snapshot).</span>
+        </form>
+      </div>
+      <div class="section"><h3>Recently synced — note: no names</h3>
+        ${c.recent.map(p => `<div class="item"><div class="meta"><span class="pill normal">${esc(p.kind)}</span>${p.priority === 'urgent' ? '<span class="pill urgent">urgent</span>' : ''}<span>${esc(p.author || p.updated_by || '')}</span></div><div style="font-size:13px">${esc(p.text)}</div></div>`).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function render() {
+  const scroll = [...document.querySelectorAll('.body')].map(b => b.scrollTop);
+  const focused = document.activeElement?.name, fdev = document.activeElement?.closest('[data-dev]')?.dataset.dev, fval = document.activeElement?.value;
+  $('#main').innerHTML = DEVICES.map(deviceColumn).join('') + cloudColumn();
+  document.querySelectorAll('.body').forEach((b, i) => { b.scrollTop = scroll[i] || 0; });
+  if (focused && fdev) { const el = $(`[data-dev="${fdev}"] [name="${focused}"]`); if (el) { el.focus(); if (fval !== undefined && el.value !== fval) el.value = fval; } }
+}
+
+async function act(d, fn, busy) {
+  if (busy) { ui[d].busy = busy; render(); }
+  try { await fn(); } catch (e) { toast(e.message); }
+  ui[d].busy = false;
+  await refresh();
+}
+
+async function runSearch(d) {
+  const u = ui[d];
+  if (!u.q.trim()) return;
+  u.answer = null;
+  u.results = await api(`/api/devices/${d}/search?q=${encodeURIComponent(u.q)}&kind=${u.kind}`);
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const d = b.closest('[data-dev]')?.dataset.dev, a = b.dataset.act;
+  if (a === 'tab') { ui[d].tab = b.dataset.v; render(); }
+  if (a === 'kind') { ui[d].kind = b.dataset.v; act(d, () => runSearch(d)); }
+  if (a === 'online') act(d, () => api(`/api/devices/${d}/online`, { method: 'POST', body: { online: b.dataset.v === '1' } }).then(() => { if (ui[d].q) return runSearch(d); }));
+  if (a === 'sync') act(d, async () => { const r = await api(`/api/devices/${d}/sync`, { method: 'POST' }); const urgent = r.sent.filter(s => s.priority === 'urgent').length; toast(`Synced in ${r.ms} ms · ${r.sent.length} sent${urgent ? ` (${urgent} urgent first)` : ''}${r.conflicts.length ? ` · ${r.conflicts.length} conflict` : ''}`); }, 'sync');
+  if (a === 'ask') act(d, async () => { if (!ui[d].q.trim()) throw new Error('Type a question first'); ui[d].results = null; const r = await api(`/api/devices/${d}/ask`, { method: 'POST', body: { question: ui[d].q } }); ui[d].answer = r; ui[d].results = { hits: r.hits, search_ms: r.search_ms, online: !r.offline }; }, 'ask');
+  if (a === 'bench') { benchBusy = true; render(); api('/api/benchmark', { method: 'POST' }).then(r => { bench = r; toast(`Scale test: ${r.points} memories, filtered search ${r.filtered_p50_ms} ms`); }).catch(err => toast(err.message)).finally(() => { benchBusy = false; render(); }); }
+  if (a === 'resolve') act(d, async () => { await api(`/api/devices/${d}/households/${b.dataset.hh}`, { method: 'POST', body: { changes: { [b.dataset.field]: b.dataset.value } } }); toast('Resolution saved — it syncs like any other change'); });
+});
+
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, d = f.closest('[data-dev]')?.dataset.dev, data = Object.fromEntries(new FormData(f));
+  if (f.dataset.form === 'search') { ui[d].q = data.q; act(d, () => runSearch(d)); }
+  if (f.dataset.form === 'note') { if (!data.text.trim()) return; act(d, async () => { ui[d].decision = await api(`/api/devices/${d}/notes`, { method: 'POST', body: { text: data.text, household: data.household || null, private: !!data.private } }); }); }
+  if (f.dataset.form === 'hh') act(d, async () => { const cur = details[d].households.find(h => h.household === f.dataset.hh).fields; const changes = Object.fromEntries(Object.entries(data).filter(([k, v]) => v !== (cur[k] ?? ''))); if (!Object.keys(changes).length) throw new Error('Nothing changed'); await api(`/api/devices/${d}/households/${f.dataset.hh}`, { method: 'POST', body: { changes } }); toast('Saved on device · queued for sync'); });
+  if (f.dataset.form === 'protocol') api('/api/cloud/protocols', { method: 'POST', body: data }).then(() => { toast('Published to the district server'); refresh(); }).catch(err => toast(err.message));
+});
+
+document.addEventListener('input', e => { const d = e.target.closest('[data-dev]')?.dataset.dev; if (d && e.target.name === 'q') ui[d].q = e.target.value; });
+$('#reset').onclick = async () => { $('#reset').textContent = 'Resetting…'; await api('/api/demo/reset', { method: 'POST' }); Object.values(ui).forEach(u => Object.assign(u, { results: null, decision: null, answer: null, q: '' })); $('#reset').textContent = 'Reset demo'; refresh(); toast('Demo reset'); };
+refresh();
+setInterval(() => { if (!document.activeElement || !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) refresh(); }, 5000);
+</script>
+</body>
+</html>
