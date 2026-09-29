@@ -6,6 +6,8 @@ Smriti is an offline-first AI memory for frontline health workers. Every device 
 
 Built for the Qdrant Edge problem statement at **Code Cubicle 6.0**.
 
+**Demo video (2 min):** https://res.cloudinary.com/ddwr3o77d/video/upload/demo-videos/smriti-demo.mp4 — Smriti is an edge app, so it runs locally (`./run.sh`).
+
 ## The edge-to-cloud workflow
 
 ```mermaid
