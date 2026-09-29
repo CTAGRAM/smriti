@@ -214,9 +214,9 @@ function panel(d, st, det, u) {
             <button class="btn small ghost" data-act="resolve" data-hh="${h.household}" data-field="${c.field}" data-value="${esc(c.theirs)}">Keep “${esc(c.theirs)}”</button></div></div>`).join('')}
         <details><summary>Update record</summary>
           <form data-form="hh" data-hh="${h.household}" class="editor">
-            <input type="text" name="risk" placeholder="risk" value="${esc(f.risk)}">
-            <input type="text" name="next_visit" placeholder="next visit" value="${esc(f.next_visit)}">
-            <input type="text" name="status" placeholder="status" value="${esc(f.status)}" style="grid-column:1/-1">
+            <input type="text" onfocus="this.select()" name="risk" placeholder="risk" value="${esc(f.risk)}">
+            <input type="text" onfocus="this.select()" name="next_visit" placeholder="next visit" value="${esc(f.next_visit)}">
+            <input type="text" onfocus="this.select()" name="status" placeholder="status" value="${esc(f.status)}" style="grid-column:1/-1">
             <button class="btn small" style="grid-column:1/-1">Save change</button>
           </form></details>
       </div>`;
