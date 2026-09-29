@@ -36,6 +36,34 @@ flowchart LR
 - **Cloud → edge**: the district publishes a protocol (e.g. a heatwave advisory) to the server; every device receives it on its next partial snapshot and can search it offline.
 - **Cloud AI, privacy-preserving**: retrieval always happens on the device. When online, a cloud model can write an answer from the top results — but it only ever receives redacted text, and the UI shows exactly what was sent. Offline, Smriti answers from memory alone.
 
+## System One triage with OpenJev (on-device, optional)
+
+Every note also gets a **typed triage** from [OpenJev](https://github.com/razorback16/openjev) — an open, Jev-compatible *System One* server. A small encoder model answers typed questions with probabilities instead of generating text, so an answer cannot go off-schema:
+
+| Question | Type | Used for |
+|---|---|---|
+| Does the note describe a danger sign that needs referral today? | yes/no → P | urgency (together with semantic similarity to danger signs) |
+| How serious is it? `routine · watch · refer soon · emergency` | score → 0–3 | stored as an indexed `severity` payload — “serious cases this week” filters `severity ≥ 2` offline |
+| Does the household need another visit within two days? | yes/no → P | shown to the worker |
+
+Smriti runs the **Laya** model (421M, ModernBERT-large, by Nandakishor M / Convai Innovations) on the **CPU**, next to the app — no network. If no OpenJev server is running, Smriti works exactly the same without the triage.
+
+**Why privacy is not left to the model.** We evaluated both of OpenJev's CPU-sized models on real Smriti notes before wiring them in:
+
+| On-device, CPU (M4) | Latency / note | Danger sign | Personal data present | Share decision |
+|---|---|---|---|---|
+| Verdict 1.4 (151M) | 130–265 ms | no separation (0.62–0.66 on every note) | no separation | 5/5 top choice, very low confidence |
+| Laya 1.0 (421M) | 360–570 ms | ranks correctly (0.54 urgent vs 0.15 routine), weak margin | missed names (0.01–0.22) | 4/5 |
+
+So Smriti uses System One where it helps — graded triage that becomes filterable memory — and keeps redaction **rule-based and auditable** (the household register plus number masking). A borderline semantic match (≥ 0.60) becomes urgent only when System One agrees (P ≥ 0.5).
+
+```bash
+git clone https://github.com/razorback16/openjev && cd openjev
+pip install -e '.[laya]'
+OPENJEV_BACKEND=laya OPENJEV_PORT=8093 OPENJEV_DEVICE=cpu python -m openjev
+# Smriti picks it up at http://127.0.0.1:8093 (override with OPENJEV_URL)
+```
+
 ## Measured on-device
 
 A fresh Edge shard filled with realistic visit notes (`POST /api/benchmark`, MacBook, CPU only):
@@ -66,6 +94,7 @@ The demo loads a village with two workers — Sunita (ASHA, phone) and Rekha (AN
 ```
 smriti/device.py    edge device: two shards, outbox, hybrid search, sync, three-way merge
 smriti/policy.py    on-device sync policy (redaction, danger-sign urgency, private notes)
+smriti/jev.py       System One triage through a local OpenJev server
 smriti/query.py     on-device query → Qdrant payload filters
 smriti/server.py    district collection, protocol publishing, overview
 smriti/cloud_ai.py  optional cloud answer over redacted context
@@ -80,4 +109,4 @@ web/index.html      the interface (no external requests — it works offline too
 - Name redaction uses the device's household register; names not in the register are not detected.
 - Protocol texts are short sample summaries for the demo, not medical guidance.
 
-Built with Qdrant Edge, Qdrant Server, FastEmbed, FastAPI and Gemini (optional). Coded with Claude Code.
+Built with Qdrant Edge, Qdrant Server, FastEmbed, OpenJev (Laya), FastAPI and Gemini (optional). Coded with Claude Code.

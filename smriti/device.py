@@ -26,7 +26,7 @@ from qdrant_edge import (
     QueryRequest, RangeFloat, ScrollRequest, UpdateOperation,
 )
 
-from . import policy
+from . import jev, policy
 from .embed import DIM, doc_vectors, query_vectors
 
 COLLECTION = "smriti"
@@ -52,7 +52,7 @@ def summary(fields: dict, hh: str, with_name: bool) -> str:
 
 INDEXED_FIELDS = {"kind": PayloadSchemaType.Keyword, "priority": PayloadSchemaType.Keyword,
                   "household": PayloadSchemaType.Keyword, "device": PayloadSchemaType.Keyword,
-                  "timestamp": PayloadSchemaType.Float}
+                  "timestamp": PayloadSchemaType.Float, "severity": PayloadSchemaType.Float}
 
 
 def create_shard(path: str) -> EdgeShard:
@@ -68,6 +68,8 @@ def build_filter(filters: dict | None) -> Filter | None:
     must = [FieldCondition(key=k, match=MatchValue(v)) for k, v in filters.items() if k in ("kind", "priority", "household", "device")]
     if filters.get("since"):
         must.append(FieldCondition(key="timestamp", range=RangeFloat(gte=filters["since"])))
+    if filters.get("min_severity") is not None:
+        must.append(FieldCondition(key="severity", range=RangeFloat(gte=filters["min_severity"])))
     return Filter(must=must) if must else None
 
 
@@ -140,20 +142,22 @@ class Device:
     def add_note(self, text: str, household: str | None = None, private: bool = False) -> dict:
         with self.lock:
             vectors = doc_vectors(text)
-            d = policy.decide(text, vectors["dense"], self.register, private)
+            triage = jev.triage(text)
+            d = policy.decide(text, vectors["dense"], self.register, private, triage)
             # Link the note to a household named in it, so household filters find it.
             household = household or next((hh for name, hh in self.register.items()
                                            if re.search(rf"\b{re.escape(name)}\b", text, re.I)), None)
             pid = str(uuid.uuid4())
             base = {"kind": "note", "household": household, "device": self.id, "author": self.name,
                     "created_at": now_iso(), "timestamp": time.time(), "priority": d.priority,
-                    "share": d.share, "reasons": d.reasons}
+                    "share": d.share, "reasons": d.reasons,
+                    **({"severity": triage["severity"], "danger_p": triage["danger"], "follow_up_p": triage["follow_up"]} if triage else {})}
             self.local.update(UpdateOperation.upsert_points([Point(pid, vectors, {**base, "text": text})]))
             self._enqueue(pid, "note", d, {**base, "text": d.redacted_text, "redacted": d.redacted_text != text},
                           priority=d.priority, share=d.share, reasons=d.reasons)
             self.log("memory", f"Saved note · {d.share.replace('_', ' ')}{' · URGENT' if d.priority == 'urgent' else ''}")
             return {"id": pid, "share": d.share, "priority": d.priority, "reasons": d.reasons,
-                    "redacted_text": d.redacted_text, "danger_score": round(d.danger_score, 2)}
+                    "redacted_text": d.redacted_text, "danger_score": round(d.danger_score, 2), "triage": triage}
 
     def household(self, hh: str) -> dict | None:
         pid = household_id(hh)
@@ -206,7 +210,7 @@ class Device:
             hits.append({"id": pid, "score": round(h.score, 4), "source": src, "kind": p.get("kind"),
                          "text": p.get("text"), "household": p.get("household"), "author": p.get("author") or p.get("updated_by"),
                          "priority": p.get("priority"), "created_at": p.get("created_at") or p.get("updated_at"),
-                         "origin": p.get("origin", "device"), "device": p.get("device")})
+                         "origin": p.get("origin", "device"), "device": p.get("device"), "severity": p.get("severity")})
         return {"hits": hits[:limit], "embed_ms": round((t1 - t0) * 1000, 2), "search_ms": round((t2 - t1) * 1000, 3),
                 "online": self.online}
 

@@ -44,6 +44,7 @@ class Decision:
     reasons: list[str] = field(default_factory=list)
     danger_match: str | None = None
     danger_score: float = 0.0
+    triage: dict | None = None
 
 
 def redact(text: str, register: dict[str, str]) -> tuple[str, list[str]]:
@@ -64,18 +65,29 @@ def redact(text: str, register: dict[str, str]) -> tuple[str, list[str]]:
     return out, found
 
 
-def decide(text: str, dense: list[float], register: dict[str, str], private: bool = False) -> Decision:
+# A System One danger probability can confirm a borderline semantic match.
+JEV_CONFIRMS = 0.5
+BORDERLINE_SIMILARITY = 0.6
+
+
+def decide(text: str, dense: list[float], register: dict[str, str], private: bool = False,
+           triage: dict | None = None) -> Decision:
+    """Privacy is rule-based and auditable; urgency combines two on-device signals."""
     redacted, pii = redact(text, register)
     sims = _danger_matrix() @ np.array(dense)
     best = int(np.argmax(sims))
     score = float(sims[best])
-    urgent = score >= URGENT_SIMILARITY
+    urgent = score >= URGENT_SIMILARITY or bool(
+        triage and triage["danger"] >= JEV_CONFIRMS and score >= BORDERLINE_SIMILARITY)
 
     if private or PRIVATE.search(text):
-        return Decision("local_only", "normal", redacted, ["marked private — never leaves the device"])
+        return Decision("local_only", "normal", redacted, ["marked private — never leaves the device"], triage=triage)
 
     reasons = [f"personal data redacted before sync ({', '.join(pii)})"] if pii else ["no personal data found"]
     if urgent:
         reasons.append(f"danger sign — “{DANGER_SIGNS[best]}” ({score:.2f}) — syncs first")
+    if triage:
+        reasons.append(f"System One triage on-device ({triage['model']}, {triage['ms']} ms): "
+                       f"danger P={triage['danger']:.2f} · severity {triage['severity']:.1f}/3 ({triage['severity_label']})")
     return Decision("redacted" if pii else "full", "urgent" if urgent else "normal", redacted, reasons,
-                    DANGER_SIGNS[best] if urgent else None, score)
+                    DANGER_SIGNS[best] if urgent else None, score, triage)

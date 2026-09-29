@@ -27,6 +27,7 @@ def ensure_collection(c: QdrantClient, reset: bool = False):
     for field in ("kind", "priority", "household", "device", "origin"):
         c.create_payload_index(COLLECTION, field, models.PayloadSchemaType.KEYWORD)
     c.create_payload_index(COLLECTION, "timestamp", models.PayloadSchemaType.FLOAT)
+    c.create_payload_index(COLLECTION, "severity", models.PayloadSchemaType.FLOAT)
 
 
 def publish_protocol(c: QdrantClient, title: str, text: str, tag: str = "protocol") -> str:

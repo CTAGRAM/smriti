@@ -152,6 +152,7 @@ function hitCard(h) {
       <span class="pill ${h.source}">${h.source === 'device' ? 'on device' : 'cloud mirror'}</span>
       <span class="pill normal">${esc(h.kind)}</span>
       ${h.priority === 'urgent' ? '<span class="pill urgent">urgent</span>' : ''}
+      ${h.severity != null ? `<span class="pill ${h.severity >= 2 ? 'urgent' : 'normal'}" title="System One severity">sev ${Number(h.severity).toFixed(1)}</span>` : ''}
       <span>${esc(h.author || '')}</span><span class="mono" style="margin-left:auto">rrf ${h.score}</span>
     </div>
     <div>${esc(h.text)}</div>
@@ -187,7 +188,16 @@ function panel(d, st, det, u) {
           <div class="row"><b>Sync policy decided on-device</b>
             <span class="pill ${dec.share === 'local_only' ? 'off' : 'cloud'}">${dec.share.replace('_', ' ')}</span>
             ${dec.priority === 'urgent' ? '<span class="pill urgent">urgent · syncs first</span>' : ''}</div>
-          <ul>${dec.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+          <ul>${dec.reasons.filter(r => !r.startsWith('System One')).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+          ${dec.triage ? `<div style="margin-top:10px;padding:10px;border-radius:12px;background:#fff">
+              <div class="row" style="font-size:12px"><b>System One triage · on-device</b><span class="faint mono" style="margin-left:auto">${esc(dec.triage.model)} · ${dec.triage.ms} ms · CPU</span></div>
+              ${[['danger sign', dec.triage.danger], ['severity · ' + dec.triage.severity_label, dec.triage.severity / 3], ['follow-up in 2 days', dec.triage.follow_up]].map(([l, v]) => `
+                <div style="display:grid;grid-template-columns:150px 1fr 44px;gap:8px;align-items:center;font-size:12px;margin-top:6px">
+                  <span class="muted">${esc(l)}</span>
+                  <span style="height:6px;border-radius:99px;background:#eef1f3;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(v * 100)}%;background:${v >= 0.5 ? 'var(--red)' : 'var(--teal)'}"></span></span>
+                  <span class="mono">${v.toFixed(2)}</span></div>`).join('')}
+              <div class="faint" style="font-size:11px;margin-top:6px">Typed answers with probabilities from OpenJev — used for triage and stored as filterable payload. Privacy decisions above stay rule-based.</div>
+            </div>` : ''}
           ${dec.share !== 'local_only' ? `<div class="muted" style="margin-top:8px;font-size:12px">What the district server will receive:</div><div class="redacted">${esc(dec.redacted_text)}</div>` : ''}
         </div>` : ''}`;
   }

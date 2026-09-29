@@ -32,6 +32,9 @@ def parse(q: str, register: dict[str, str]) -> tuple[str, dict, list[str]]:
     if re.search(r"\burgent\b", q, re.I):
         filters["priority"] = "urgent"
         chips.append("priority = urgent")
+    if re.search(r"\b(serious|severe cases|high severity|need referral|needs referral)\b", q, re.I):
+        filters["min_severity"] = 2.0
+        chips.append("severity ≥ 2 (System One)")
     for kind, pattern in KIND_WORDS.items():
         if re.search(pattern, q, re.I):
             filters["kind"] = kind
