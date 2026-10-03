@@ -178,7 +178,9 @@ class Device:
             fields = {**current["fields"], **changes}
             record = {"kind": "household", "household": hh, "fields": fields, "version": base_version + 1,
                       "updated_by": self.name, "updated_at": now_iso(), "timestamp": time.time(),
-                      "conflicts": current.get("conflicts", []), "device": self.id}
+                      # Editing a conflicted field resolves it; the sync carries the resolution.
+                      "conflicts": [c for c in current.get("conflicts", []) if c["field"] not in changes],
+                      "device": self.id}
             text = summary(fields, hh, with_name=True)
             self.local.update(UpdateOperation.upsert_points([Point(household_id(hh), doc_vectors(text), {**record, "text": text})]))
             self._enqueue(household_id(hh) + f":{time.time()}", "household", None,
